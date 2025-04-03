@@ -19,10 +19,10 @@ cursor = conn.cursor()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ai-sustainable-farming.vercel.app", "http://localhost:5173"],
+    allow_origins=["https://ai-sustainable-farming.vercel.app"],  # No trailing slash
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 # Create Farmer Data Table
 cursor.execute("""
