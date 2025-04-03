@@ -85,6 +85,11 @@ class MarketData(BaseModel):
     Consumer_Trend_Index: float
 
 
+@app.get("/")
+def home():
+    return {"message": "Welcome to the Farming API"}
+
+
 # API: Upload Farmer Data
 @app.post("/upload/farmer_data")
 def upload_farmer_data(data: FarmerData):
