@@ -21,7 +21,7 @@ cursor = conn.cursor()
 # Apply CORS Middleware BEFORE defining routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ai-sustainable-farming.vercel.app"],  # Frontend URL
+    allow_origins=["https://ai-sustainable-farming.vercel.app"],  # Allow only your frontend
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
