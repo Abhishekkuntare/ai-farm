@@ -17,13 +17,20 @@ conn = sqlite3.connect("farming_data.db", check_same_thread=False)
 cursor = conn.cursor()
 
 
+
+# Apply CORS Middleware BEFORE defining routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ai-sustainable-farming.vercel.app"],  # No trailing slash
+    allow_origins=["https://ai-sustainable-farming.vercel.app"],  # Frontend URL
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
+
+@app.get("/")  
+async def root():
+    return {"message": "API is working"}
+
 # Create Farmer Data Table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS farmer_data (
@@ -180,44 +187,98 @@ def fetch_dynamic_content(query):
     
     return youtube_search_url, search_links, image_links
 
+# @app.get("/advise/{farm_id}")
+# def get_advice(farm_id: int):
+#     # Fetch farmer data
+#     cursor.execute("SELECT * FROM farmer_data WHERE Farm_ID = ?", (farm_id,))
+#     farm_data = cursor.fetchone()
+#     if not farm_data:
+#         return {"message": "Farm not found"}
+    
+#     # Fetch market data for the given crop
+#     cursor.execute("SELECT * FROM market_data WHERE Product = ?", (farm_data[5],))
+#     market_data = cursor.fetchone()
+
+#     # 🛠️ Extracting necessary data for AI model
+#     input_data = {
+#         "Soil_pH": farm_data[1],
+#         "Soil_Moisture": farm_data[2],
+#         "Temperature_C": farm_data[3],
+#         "Rainfall_mm": farm_data[4],
+#         "Crop_Type": farm_data[5],
+#         "Market_Price": market_data[2] if market_data else "N/A",
+#         "Demand_Index": market_data[3] if market_data else "N/A"
+#     }
+
+#     # 🧠 AI Model Processing
+#     response = ollama.chat(model="tinyllama", messages=[
+#         {"role": "system", "content": "You are an advanced AI farm and market advisor."},
+#         {"role": "user", "content": f"Based on this data: {input_data}, provide best farming strategies, market advice, and sustainability tips."}
+#     ])
+
+#     # 🔍 Fetching dynamic learning resources
+#     youtube_url, search_links, image_links = fetch_dynamic_content(farm_data[5] + " farming best practices")
+
+#     return {
+#         "recommendation": response["message"],  # AI-generated advice
+#         "videos": youtube_url,  # Dynamic video link
+#         "useful_links": search_links,  # Informational links
+#         "images": image_links  # Related images
+#     }
+
 @app.get("/advise/{farm_id}")
 def get_advice(farm_id: int):
-    # Fetch farmer data
-    cursor.execute("SELECT * FROM farmer_data WHERE Farm_ID = ?", (farm_id,))
-    farm_data = cursor.fetchone()
-    if not farm_data:
-        return {"message": "Farm not found"}
-    
-    # Fetch market data for the given crop
-    cursor.execute("SELECT * FROM market_data WHERE Product = ?", (farm_data[5],))
-    market_data = cursor.fetchone()
+    print(f"Received request for farm_id: {farm_id}")  # Debugging
 
-    # 🛠️ Extracting necessary data for AI model
-    input_data = {
-        "Soil_pH": farm_data[1],
-        "Soil_Moisture": farm_data[2],
-        "Temperature_C": farm_data[3],
-        "Rainfall_mm": farm_data[4],
-        "Crop_Type": farm_data[5],
-        "Market_Price": market_data[2] if market_data else "N/A",
-        "Demand_Index": market_data[3] if market_data else "N/A"
-    }
+    try:
+        # Fetch farmer data
+        cursor.execute("SELECT * FROM farmer_data WHERE Farm_ID = ?", (farm_id,))
+        farm_data = cursor.fetchone()
 
-    # 🧠 AI Model Processing
-    response = ollama.chat(model="tinyllama", messages=[
-        {"role": "system", "content": "You are an advanced AI farm and market advisor."},
-        {"role": "user", "content": f"Based on this data: {input_data}, provide best farming strategies, market advice, and sustainability tips."}
-    ])
+        if not farm_data:
+            print(f"Farm not found: {farm_id}")
+            return {"message": "Farm not found"}
 
-    # 🔍 Fetching dynamic learning resources
-    youtube_url, search_links, image_links = fetch_dynamic_content(farm_data[5] + " farming best practices")
+        print(f"Farmer data: {farm_data}")
 
-    return {
-        "recommendation": response["message"],  # AI-generated advice
-        "videos": youtube_url,  # Dynamic video link
-        "useful_links": search_links,  # Informational links
-        "images": image_links  # Related images
-    }
+        # Fetch market data
+        cursor.execute("SELECT * FROM market_data WHERE Product = ?", (farm_data[5],))
+        market_data = cursor.fetchone()
+        print(f"Market data: {market_data}")
+
+        # Prepare input for AI
+        input_data = {
+            "Soil_pH": farm_data[1],
+            "Soil_Moisture": farm_data[2],
+            "Temperature_C": farm_data[3],
+            "Rainfall_mm": farm_data[4],
+            "Crop_Type": farm_data[5],
+            "Market_Price": market_data[2] if market_data else "N/A",
+            "Demand_Index": market_data[3] if market_data else "N/A"
+        }
+        print(f"Input data for AI: {input_data}")
+
+        # AI Model Processing
+        response = ollama.chat(model="tinyllama", messages=[
+            {"role": "system", "content": "You are an advanced AI farm and market advisor."},
+            {"role": "user", "content": f"Based on this data: {input_data}, provide best farming strategies, market advice, and sustainability tips."}
+        ])
+        print(f"AI Response: {response}")
+
+        # Fetch external resources
+        youtube_url, search_links, image_links = fetch_dynamic_content(farm_data[5] + " farming best practices")
+        
+        return {
+            "recommendation": response["message"],
+            "videos": youtube_url,
+            "useful_links": search_links,
+            "images": image_links
+        }
+
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return {"message": "Internal Server Error"}
+
 
 # Run API Server
 if __name__ == "__main__":
