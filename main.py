@@ -17,20 +17,13 @@ conn = sqlite3.connect("farming_data.db", check_same_thread=False)
 cursor = conn.cursor()
 
 
-
-# Apply CORS Middleware BEFORE defining routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow only your frontend
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
-@app.get("/")  
-async def root():
-    return {"message": "API is working"}
-
 # Create Farmer Data Table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS farmer_data (
