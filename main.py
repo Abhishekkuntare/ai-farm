@@ -5,6 +5,7 @@ import ollama
 from pydantic import BaseModel
 import requests
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 
 UNSPLASH_ACCESS_KEY = "eIaqCQxyf7UZQmWLLRMNOxLNgszGSC4dqH2q20pxK3g"
@@ -13,7 +14,8 @@ UNSPLASH_ACCESS_KEY = "eIaqCQxyf7UZQmWLLRMNOxLNgszGSC4dqH2q20pxK3g"
 app = FastAPI()
 
 # Connect to SQLite Database
-conn = sqlite3.connect("farming_data.db", check_same_thread=False)
+db_path = os.path.join(os.getcwd(), "farming_data.db")
+conn = sqlite3.connect(db_path, check_same_thread=False)
 cursor = conn.cursor()
 
 
@@ -29,7 +31,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "API is running on Hugging Face!"}
+    return {"message": "API is running !"}
 
 
 # Create Farmer Data Table
@@ -231,4 +233,4 @@ def get_advice(farm_id: int):
 # Run API Server
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)  # Hugging Face Spaces runs on port 7860
+    uvicorn.run(app, host="0.0.0.0", port=8000)
