@@ -27,9 +27,10 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-@app.get("/")  
+@app.get("/")
 async def root():
-    return {"message": "API is working"}
+    return {"message": "API is running on Hugging Face!"}
+
 
 # Create Farmer Data Table
 cursor.execute("""
@@ -187,6 +188,7 @@ def fetch_dynamic_content(query):
     
     return youtube_search_url, search_links, image_links
 
+
 @app.get("/advise/{farm_id}")
 def get_advice(farm_id: int):
     # Fetch farmer data
@@ -229,4 +231,4 @@ def get_advice(farm_id: int):
 # Run API Server
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=7860)  # Hugging Face Spaces runs on port 7860
