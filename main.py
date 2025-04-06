@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
+from deep_translator import GoogleTranslator
 import sqlite3
 import json
 import ollama
@@ -191,19 +192,27 @@ def fetch_dynamic_content(query):
     return youtube_search_url, search_links, image_links
 
 
+def get_system_prompt(lang: str) -> str:
+    prompts = {
+        "en": "You are an expert farming assistant. Provide practical, region-specific, and sustainable farming advice.",
+        "hi": "आप एक विशेषज्ञ कृषि सहायक हैं। कृपया व्यावहारिक, क्षेत्र-विशिष्ट और सतत कृषि सलाह दें।",
+        "mr": "तुम्ही एक तज्ज्ञ शेती सहाय्यक आहात. कृपया व्यवहार्य, प्रदेशानुसार आणि शाश्वत शेतीसाठी सल्ला द्या."
+    }
+    return prompts.get(lang, prompts["en"])
+
 @app.get("/advise/{farm_id}")
-def get_advice(farm_id: int):
-    # Fetch farmer data
+def get_advice(farm_id: int, lang: str = Query("en")):
+    # 🧑‍🌾 Fetch farmer data
     cursor.execute("SELECT * FROM farmer_data WHERE Farm_ID = ?", (farm_id,))
     farm_data = cursor.fetchone()
     if not farm_data:
         return {"message": "Farm not found"}
-    
-    # Fetch market data for the given crop
+
+    # 🛒 Fetch market data
     cursor.execute("SELECT * FROM market_data WHERE Product = ?", (farm_data[5],))
     market_data = cursor.fetchone()
 
-    # 🛠️ Extracting necessary data for AI model
+    # 📊 Prepare input data
     input_data = {
         "Soil_pH": farm_data[1],
         "Soil_Moisture": farm_data[2],
@@ -214,21 +223,43 @@ def get_advice(farm_id: int):
         "Demand_Index": market_data[3] if market_data else "N/A"
     }
 
-    # 🧠 AI Model Processing
-    response = ollama.chat(model="tinyllama", messages=[
-        {"role": "system", "content": "You are an advanced AI farm and market advisor."},
-        {"role": "user", "content": f"Based on this data: {input_data}, provide best farming strategies, market advice, and sustainability tips."}
-    ])
+    # 🧠 Prompt in English (AI prefers this base language)
+    user_prompt = f"Based on this data: {input_data}, provide best farming strategies, market advice, and sustainability tips."
 
-    # 🔍 Fetching dynamic learning resources
+    # 🧠 AI Response
+    response = ollama.chat(
+        model="tinyllama",
+        messages=[
+            {"role": "system", "content": get_system_prompt("en")},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+
+    # 🧾 Extract AI response
+    message_obj = response.get("message", {})
+    recommendation_text = message_obj.get("content") or "No advice generated."
+
+    # 🌐 Translate if needed
+    if lang != "en":
+        try:
+            translated_text = GoogleTranslator(source='en', target=lang).translate(recommendation_text)
+        except Exception as e:
+            translated_text = f"Translation failed: {str(e)}"
+    else:
+        translated_text = recommendation_text
+
+    # 🌐 Fetch additional resources
     youtube_url, search_links, image_links = fetch_dynamic_content(farm_data[5] + " farming best practices")
 
     return {
-        "recommendation": response["message"],  # AI-generated advice
-        "videos": youtube_url,  # Dynamic video link
-        "useful_links": search_links,  # Informational links
-        "images": image_links  # Related images
+        "recommendation": {
+            "content": translated_text
+        },
+        "videos": youtube_url,
+        "useful_links": search_links,
+        "images": image_links
     }
+
 
 # Run API Server
 if __name__ == "__main__":
